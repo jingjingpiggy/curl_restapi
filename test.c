@@ -60,29 +60,29 @@ int post(char* mac, char* status)
   return 0;
 }	
 
-char* getopts(int argc, char **argv)
+int getopts(int argc, char **argv, char* output, size_t size)
 {
-  char mac[20];
-  for(int i = 1; i < argc; i++) {
-     if (!strcmp(argv[i], "--mac")&&i+1<argc){
-	 strcpy(mac, argv[++i]);
-	 printf("mac:%s\n", mac);
-	 hasMac = 1;
-     	}
-     else {
-	 return NULL;
-     	}
-    }
-  return mac;
+  int hasMac = 0;
+  for(int i = 0; i < argc; i++)
+  {
+     if (!strncmp(argv[i], "--mac", 4)&&i+1<argc)
+     {
+         snprintf(output, size, "%s", argv[++i]);
+         hasMac = 1;
+        }
+   }
+  return hasMac;
 }
 
  
 int main(int argc, char* argv[])
 {
-  char* mac = getopts(argc, argv); 
-  if (NULL==mac) {
+  char mac[20];
+  if (1!=(getopts(argc, argv, mac, sizeof(mac)))) {
      printf("e.g.\ntest.exe --mac aa:bb:cc:dd:ee:ff\n");
      return 0;
+  } else {
+     printf("mac = %s\n", mac);
   }
 
   CURL *curl_handle;
