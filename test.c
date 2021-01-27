@@ -183,12 +183,6 @@ int main(int argc, char* argv[])
 	  return -1;
   }
   */
-
-  /*
-  printf("%s\r\n", deploy_s);
-  printf("%s\r\n", os_name);
-  printf("%s\r\n", os_path);
-  */ 
   return 0;
 }
 
