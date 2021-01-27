@@ -70,25 +70,9 @@ int put(char* mac, char* status)
 }
 
 
-int getopts(int argc, char **argv, char* output, size_t size)
-{
-  int hasMac = 0;
-  for(int i = 0; i < argc; i++)
-  {
-     if (!strncmp(argv[i], "--mac", 4)&&i+1<argc)
-     {
-         snprintf(output, size, "%s", argv[++i]);
-         hasMac = 1;
-        }
-   }
-  return hasMac;
-}
-
- 
 int main(int argc, char* argv[])
 {
   char mac[20];
-  /*
   FILE *f;
   char ln[80];
   system("ipconfig /all | find \"Physical Address\" > ipconfig.txt");
@@ -96,16 +80,10 @@ int main(int argc, char* argv[])
   if (NULL != f) {
      fgets(ln, 80, f);
      fclose(f);
-     //printf("MAC:%s", ln+strlen(ln)-19);
+     printf("MAC:%s\n", ln+strlen(ln)-19);
      snprintf(mac, sizeof(mac), "%s", ln+strlen(ln)-19);
-  }
-  */
 
-  if (1!=(getopts(argc, argv, mac, sizeof(mac)))) {
-     printf("e.g.\ntest.exe --mac aa:bb:cc:dd:ee:ff\n");
-     return 0;
-  } else {
-     printf("mac = %s\n", mac);
+     //snprintf(mac, sizeof(mac), "%s", "48:4d:7e:bc:4e:06");
   }
 
   CURL *curl_handle;
@@ -148,7 +126,7 @@ int main(int argc, char* argv[])
 
   cJSON *cjson = cJSON_Parse(response);
   if (cjson == NULL) {
-    printf("Json pack into cjson error...");
+    printf("Json pack into cjson error...\n");
   }
   else {
     printf("%s\r\n", cJSON_Print(cjson)); 
@@ -156,12 +134,28 @@ int main(int argc, char* argv[])
 
   cJSON* jres = cJSON_GetObjectItem(cjson, "res"); 
   char* deploy_s = cJSON_GetObjectItem(jres, "deployment_status")->valuestring;
-  /*
-  //printf("%s\r\n", deploy_s);
-  if (strcmp(deploy_s, "deploy") == 0) {
-	  printf("The OS has been deployed, gonna exit!\n");
-	  exit(0);
-  }*/ 
+  printf("deploy_s: %s\r\n", deploy_s);
+
+  system("bcdedit.exe /set {fwbootmgr} bootsequence {bootmgr}");
+
+  if (strcmp(deploy_s, "scheduled") == 0) {
+    printf("Gonna deploy windows os. \n");
+  }
+  else if (strcmp(deploy_s, "deploying") == 0) {
+    printf("The OS has been deployed, update status...\n");
+    char* status = "done";
+    int statuspost = put(mac, status);
+    if (statuspost != 0) { 
+	printf("Update os deploy statement fail...\n");
+    } else {
+	printf("Update os deploy statement success...\n");
+    }     
+    system("shutdown /r /t 0");
+  }
+  else{
+    printf("The OS has been deployed, gonna exit!\n");
+    system("shutdown -r -t 0");
+  } 
 
   char* os_name = cJSON_GetObjectItem(jres, "os_name")->valuestring;
   char* os_path = cJSON_GetObjectItem(jres, "os_path")->valuestring;
@@ -172,19 +166,18 @@ int main(int argc, char* argv[])
   strcat(ps, os_name);
   strcat(ps, "\\Setup.exe"); 
 
-  /*
-  int statuspost = put(mac, deploy_s);
+  char* status = "deploying";
+  int statuspost = put(mac, status);
   if (statuspost != 0) { 
-	printf("Post os deploy statement fail...");
+	printf("Post os deploy statement fail...\n");
+  } else {
+	printf("Post os deploy statement success...\n");
   } 
-  else {
-	printf("Gonna deploy os...");
-  }
-  */
+  //
   // exec setup
-  //printf("%s\n", ps);
+  printf("%s\n", ps);
+  system(ps);
   /*
-  //system("ls");
   if(execl("/bin/ls","ls", "-a", NULL) < 0) {
 	  printf(stderr, "execl failed:%s", strerror(errno));
 	  return -1;
