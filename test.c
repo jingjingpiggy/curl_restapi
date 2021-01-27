@@ -12,9 +12,7 @@ struct MemoryStruct {
   char *memory;
   size_t size;
 };
- 
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
-{
+ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
   size_t realsize = size * nmemb;
   struct MemoryStruct *mem = (struct MemoryStruct *)userp;
  
@@ -32,22 +30,33 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
   return realsize;
 }
 
-int post(char* mac, char* status)
+int put(char* mac, char* status)
 {
   CURL *curl;
   CURLcode res;
-  char str[100];
+  char body[100];
 
   curl_global_init(CURL_GLOBAL_ALL);
 
   curl = curl_easy_init();
-  if(curl) {
+  if(curl)
+  {
+    struct curl_slist *headers = NULL;
+
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    snprintf(body, sizeof(body), "{\"machine_mac\":\"%s\",\"deployment_status\":\"%s\"}", mac, status);
+
     curl_easy_setopt(curl, CURLOPT_URL, "http://hawkeye.cmit.local:38888/api/v1.0/machine/deployment_status");
-    
-    data = sprintf(str, "machine_mac=%s&deployment_status=%s", mac, status);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data);
+
+    curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
+
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
 
     res = curl_easy_perform(curl);
+
     if(res != CURLE_OK) {
       fprintf(stderr, "curl_easy_perform() failed: %s\n",
               curl_easy_strerror(res));
@@ -58,7 +67,8 @@ int post(char* mac, char* status)
   }
   curl_global_cleanup();
   return 0;
-}	
+}
+
 
 int getopts(int argc, char **argv, char* output, size_t size)
 {
@@ -78,6 +88,19 @@ int getopts(int argc, char **argv, char* output, size_t size)
 int main(int argc, char* argv[])
 {
   char mac[20];
+  /*
+  FILE *f;
+  char ln[80];
+  system("ipconfig /all | find \"Physical Address\" > ipconfig.txt");
+  f = fopen("ipconfig.txt", "r");
+  if (NULL != f) {
+     fgets(ln, 80, f);
+     fclose(f);
+     //printf("MAC:%s", ln+strlen(ln)-19);
+     snprintf(mac, sizeof(mac), "%s", ln+strlen(ln)-19);
+  }
+  */
+
   if (1!=(getopts(argc, argv, mac, sizeof(mac)))) {
      printf("e.g.\ntest.exe --mac aa:bb:cc:dd:ee:ff\n");
      return 0;
@@ -98,7 +121,7 @@ int main(int argc, char* argv[])
  
   curl_handle = curl_easy_init();
  
-  url = sprintf(mac, "http://hawkeye.cmit.local:38888/api/v1.0/machine?mac=%s", mac);
+  sprintf(url, "http://hawkeye.cmit.local:38888/api/v1.0/machine?mac=%s", mac);
   curl_easy_setopt(curl_handle, CURLOPT_URL, url);
  
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -113,7 +136,6 @@ int main(int argc, char* argv[])
             curl_easy_strerror(res));
   }
   else {
-    //printf("%lu bytes retrieved\n", (unsigned long)chunk.size);
     strcpy(response, chunk.memory);
   }
 
@@ -125,26 +147,12 @@ int main(int argc, char* argv[])
   curl_global_cleanup();
 
   cJSON *cjson = cJSON_Parse(response);
-  if (cjson == NULL){
-	  printf("Json pack into cjson error...");
-  } else {
-	  /*
-	   * {
-		"code":	0,
-		"res":	{
-			"id":	3,
-			"name":	"Quality-PC-3",
-			"mac":	"48:4d:7e:bc:4e:06",
-			"ip":	"10.0.23.115",
-			"os_id":	1,
-			"deployment_status":	"deploy",
-			"deployment_starttime":	"",
-			"os_name":	"CMGE V0-G",
-			"os_path":	"\\\\10.0.23.113\\public\\V2020L_TempFix"
-			}
-		}
-
-	   */ printf("%s\r\n", cJSON_Print(cjson)); }
+  if (cjson == NULL) {
+    printf("Json pack into cjson error...");
+  }
+  else {
+    printf("%s\r\n", cJSON_Print(cjson)); 
+  }
 
   cJSON* jres = cJSON_GetObjectItem(cjson, "res"); 
   char* deploy_s = cJSON_GetObjectItem(jres, "deployment_status")->valuestring;
@@ -164,13 +172,15 @@ int main(int argc, char* argv[])
   strcat(ps, os_name);
   strcat(ps, "\\Setup.exe"); 
 
-  int statuspost = post(mac, deployment_status)
-  if (statuspost != 0) {
-	  print("Post os deploy statement fail...");
-  } else {
-	print("Gonna deploy os...");
+  /*
+  int statuspost = put(mac, deploy_s);
+  if (statuspost != 0) { 
+	printf("Post os deploy statement fail...");
   } 
-
+  else {
+	printf("Gonna deploy os...");
+  }
+  */
   // exec setup
   //printf("%s\n", ps);
   /*
