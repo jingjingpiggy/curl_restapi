@@ -5,3 +5,10 @@ cd curl
 make -j8
 sudo make install
 gcc -o test cJSON/cJson.c test.c -lcurl -lm
+
+windows 的IDE比较麻烦:
+添加libcurl工程
+1. General Windows SDK Version: 10.0.17134.0
+2. C/C++ General: Additional Include Directories: libcurl 头文件路径; Preprocessor Definitions: + _CRT_SECURE_NO_WARNINGS; Code Generation: Muti-threaded(/MT)"静态库"; 
+3. Linker: Additional Library Directories: libcurl lib库路径; Input: Ignore Specific Default Libraries: libcmt.lib
+
